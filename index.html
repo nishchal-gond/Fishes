@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrowthX Learn Easy — The Fish Market, Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink-deep:#081120; --ink:#0D1B2E; --ink-raise:#142A45; --ink-well:#0A1626;
+    --line:rgba(160,190,225,.14);
+    --foam:#EAF2FB; --mist:#9AB0C9;
+    --bid:#2FBF8F; --bid-soft:rgba(47,191,143,.13);
+    --ask:#F2635E; --ask-soft:rgba(242,99,94,.12);
+    --brass:#E8B54A; --brass-soft:rgba(232,181,74,.13);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(900px 420px at 85% -80px, rgba(232,181,74,.05), transparent 60%),
+      radial-gradient(1000px 600px at -10% 30%, rgba(47,191,143,.045), transparent 55%),
+      var(--ink-deep);
+    color:var(--foam);
+    font-family:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  .page{width:min(720px,100%);margin:0 auto;padding:34px 16px 60px}
+  h1,h2{font-family:"Bricolage Grotesque","Instrument Sans",sans-serif}
+  .kicker{color:var(--brass);font-weight:600;font-size:13.5px}
+  h1{font-size:clamp(30px,6.6vw,42px);font-weight:800;line-height:1.05;margin:8px 0 10px;letter-spacing:-.01em}
+  .lede{color:var(--mist);font-size:15px;max-width:60ch}
+  .lede b{color:var(--foam);font-weight:600}
+  .lede .up{color:var(--bid);font-weight:600}
+  .lede .dn{color:var(--ask);font-weight:600}
+
+  .panel{background:var(--ink);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-top:18px}
+
+  .ticker{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line);
+    background:var(--ink-well);min-height:44px}
+  .ticker .dot{width:7px;height:7px;border-radius:50%;background:var(--bid);flex:none}
+  .ticker span{font-size:13.5px;color:var(--foam)}
+
+  #stage{display:block;width:100%;height:auto;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+  #stage:active{cursor:grabbing}
+  svg text{font-family:"Instrument Sans",system-ui,sans-serif}
+  .plabel{fill:var(--mist);font-size:13px;font-weight:600}
+  .plabel.cur{fill:var(--brass);font-weight:800}
+  .rowbg{fill:rgba(160,190,225,.045)}
+  .row.side-ask .rowbg{fill:rgba(242,99,94,.06)}
+  .row.side-bid .rowbg{fill:rgba(47,191,143,.07)}
+  .row.hot .rowbg{fill:rgba(232,181,74,.10);stroke:rgba(232,181,74,.5);stroke-width:1.2}
+  .row.cold .sf{opacity:.32}
+  .row .sf{opacity:1}
+  .sf{transition:transform .2s ease-in, opacity .2s ease-in}
+  .spawn{transition:transform .35s ease-out, opacity .35s ease-out}
+  #whale{cursor:grab}
+  #whale use{transform-box:fill-box;transform-origin:center}
+  #whale.gulp use{animation:gulp .2s ease-out}
+  @keyframes gulp{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+  @media (prefers-reduced-motion:reduce){
+    .sf,.spawn{transition:none}
+    #whale.gulp use{animation:none}
+  }
+  .candle-body.up{fill:var(--bid);stroke:#1E8F6A}
+  .candle-body.dn{fill:var(--ask);stroke:#B2423E}
+  .candle-body.flat{fill:var(--mist);stroke:#6E86A0}
+
+  .readout{display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+  .chip{display:inline-flex;align-items:baseline;gap:7px;background:var(--ink-well);
+    border:1px solid var(--line);border-radius:10px;padding:6px 11px;
+    font-size:12px;font-weight:700;color:var(--mist);letter-spacing:.04em}
+  .chip b{font-size:16px;letter-spacing:0;color:var(--foam);font-variant-numeric:tabular-nums}
+  .chip.last.up b{color:var(--bid)} .chip.last.dn b{color:var(--ask)}
+  .hint{padding:0 16px 14px;color:var(--mist);font-size:13px}
+  .hint b{color:var(--brass);font-weight:600}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;padding:0 16px 18px}
+  .btn{appearance:none;border:0;cursor:pointer;font-family:inherit;font-weight:700;font-size:14.5px;
+    padding:11px 16px;border-radius:12px;transition:filter .12s}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  .btn.primary{background:var(--brass);color:#081120}
+  .btn.ghost{background:var(--ink-raise);color:var(--foam);border:1px solid var(--line)}
+  .btn.pill{background:var(--ink-raise);color:var(--mist);border:1px solid var(--line);font-weight:600}
+  .btn.pill.on{color:var(--bid);border-color:rgba(47,191,143,.4);background:var(--bid-soft)}
+
+  .history{margin-top:18px}
+  .history h2{font-size:19px;font-weight:700;margin-bottom:4px}
+  .history p{color:var(--mist);font-size:13.5px;margin-bottom:10px}
+  .hist-panel{background:var(--ink-well);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+  #histSvg{display:block;width:100%;height:auto}
+  .empty-note{fill:var(--mist);font-size:13px}
+
+  .credit{margin-top:28px;text-align:center;padding:22px 16px;border:1px solid rgba(232,181,74,.38);
+    border-radius:16px;background:linear-gradient(135deg,rgba(232,181,74,.13),rgba(232,181,74,.04))}
+  .credit .brand{font-family:"Bricolage Grotesque","Instrument Sans",sans-serif;font-weight:800;
+    font-size:23px;letter-spacing:.01em}
+  .credit .brand span{color:var(--brass)}
+  .credit .by{color:var(--mist);font-size:13.5px;margin-top:5px}
+  .credit .by b{color:var(--foam);font-weight:600}
+
+  footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);
+    color:var(--mist);font-size:12.5px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="fish" viewBox="0 0 64 40">
+      <path d="M46 20c0 8.8-9 15-20 15S6 28.8 6 20 15 5 26 5s20 6.2 20 15z" fill="currentColor"/>
+      <path d="M45 20l15-11.5v23z" fill="currentColor" opacity=".82"/>
+      <path d="M24 6.5q7-5 13-3.5-1.5 5.5-8 7.5z" fill="#081120" opacity=".22"/>
+      <circle cx="16.5" cy="16" r="2.7" fill="#081120"/>
+      <path d="M10.5 23.5q4 3.2 8.5 1.2" stroke="#081120" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="page">
+  <header>
+    <div class="kicker">GrowthX Learn Easy — interactive market basics</div>
+    <h1>The fish market, live 🐋</h1>
+    <p class="lede">Press and drag in the water to steer the big fish — you're the aggressive trader.
+      <span class="dn">Coral fish are sell orders</span> and always float above the current price;
+      <span class="up">green fish are buy orders</span> waiting below it.
+      Eat upward and you're <b>buying</b> — the candle climbs. Eat downward and you're <b>selling</b> — it falls.
+      New orders keep arriving around wherever price is, so the whole book — and the spread — follows you.</p>
+  </header>
+
+  <div class="panel">
+    <div class="ticker"><span class="dot"></span><span id="ticker">Drag the big fish to a glowing row to make your first trade.</span></div>
+
+    <svg id="stage" viewBox="0 0 420 560" role="application"
+         aria-label="Interactive order book. Drag the big fish to eat resting orders; the candlestick on the right forms from your trades, and the book rebuilds around the current price.">
+      <!-- grid -->
+      <g id="grid" stroke="rgba(160,190,225,.09)" stroke-width="1"></g>
+      <!-- moving spread band -->
+      <g id="spread" opacity="0">
+        <rect id="spreadRect" x="36" y="276" width="248" height="8" fill="rgba(232,181,74,.10)"/>
+        <text id="spreadText" x="338" y="284" text-anchor="end" fill="#E8B54A" font-size="10.5" font-weight="700">SPREAD 1 AED</text>
+      </g>
+      <!-- price labels -->
+      <g id="plabels"></g>
+      <!-- rows (order book) -->
+      <g id="rows"></g>
+      <!-- column titles -->
+      <text x="160" y="26" text-anchor="middle" fill="#9AB0C9" font-size="12.5" font-weight="600">The order book — price ladder</text>
+      <text x="366" y="26" text-anchor="middle" fill="#9AB0C9" font-size="12.5" font-weight="600">This candle</text>
+      <!-- last-price line -->
+      <line id="lastLine" x1="36" y1="256" x2="340" y2="256" stroke="#E8B54A" stroke-width="1.4" stroke-dasharray="2 6"/>
+      <!-- candle -->
+      <line id="wick" x1="366" y1="256" x2="366" y2="256" stroke="#EAF2FB" stroke-width="3.5" stroke-linecap="round"/>
+      <rect id="body" class="candle-body flat" x="349" y="254" width="34" height="4" rx="3" stroke-width="2"/>
+      <!-- the big fish -->
+      <g id="whale"><use href="#fish" x="-46" y="-28" width="92" height="56" fill="#E8B54A" color="#E8B54A"/></g>
+    </svg>
+
+    <div class="readout">
+      <span class="chip">OPEN <b id="rO">10</b></span>
+      <span class="chip">HIGH <b id="rH">10</b></span>
+      <span class="chip">LOW <b id="rL">10</b></span>
+      <span class="chip last" id="rLastChip">LAST <b id="rC">10</b></span>
+      <span class="chip">TRADES <b id="rT">0</b></span>
+    </div>
+    <div class="hint">Glowing rows are the <b>best ask</b> and <b>best bid</b> — markets always trade the best available price first. The <b>gold band</b> between them is the spread: it stretches when you clear a side out, then tightens again as fresh orders rebuild around price.</div>
+    <div class="controls">
+      <button class="btn primary" id="closeBtn">🕯️ Close candle, start next</button>
+      <button class="btn pill on" id="autoBtn" aria-pressed="true">🔁 Order flow: ON</button>
+      <button class="btn ghost" id="resetBtn">Reset market</button>
+    </div>
+  </div>
+
+  <div class="history">
+    <h2>Your chart so far</h2>
+    <p>Every time you close a candle, it joins the chart — same scale, one candle per period. This is all a price chart ever is.</p>
+    <div class="hist-panel">
+      <svg id="histSvg" viewBox="0 0 396 96">
+        <text class="empty-note" x="12" y="52">No closed candles yet — trade, then press "Close candle".</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="credit">
+    <div class="brand">GrowthX <span>Trading Lab</span></div>
+    <div class="by">Fish-market analogy — concept by trader <b>Ushan Thomas</b></div>
+  </div>
+
+  <footer>
+    <span>Prices are illustrative, in AED.</span>
+    <span>For education only — not investment advice.</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var XLINK = "http://www.w3.org/1999/xlink";
+
+  // ---- market model ----
+  var LEVELS = [14,13,12,11,10,9,8,7,6,5];   // top to bottom
+  var CAP = 5;                                // max fish per level
+  var SEED = {14:["ask",3],13:["ask",2],12:["ask",3],11:["ask",4],10:["ask",2],
+              9:["bid",3],8:["bid",4],7:["bid",2],6:["bid",1],5:["bid",2]};
+
+  // ---- geometry ----
+  var TOP = 40, ROWH = 48;
+  var yOf = function(p){ return TOP + (14 - p) * ROWH + ROWH/2; };
+  var slotX = function(i){ return 63 + i * 38; };
+  var WHALE_CLAMP = {x0:100, x1:302, y0:56, y1:504};
+  var MOUTH_DX = -44, EAT_R = 30;
+
+  // ---- state ----
+  var book = {};       // price -> array of fish nodes
+  var sideOf = {};     // price -> "ask" | "bid" | null
+  var open = 10, high = 10, low = 10, last = 10, trades = 0;
+  var history = [];
+  var autoOrders = true;
+  var wx = 250, wy = 280, tx = 250, ty = 280;
+  var lastChomp = 0, lastLockMsg = 0;
+
+  // ---- dom ----
+  var stage = document.getElementById("stage");
+  var rowsG = document.getElementById("rows");
+  var gridG = document.getElementById("grid");
+  var plabelsG = document.getElementById("plabels");
+  var whale = document.getElementById("whale");
+  var wick = document.getElementById("wick");
+  var bodyR = document.getElementById("body");
+  var lastLine = document.getElementById("lastLine");
+  var spreadG = document.getElementById("spread");
+  var spreadRect = document.getElementById("spreadRect");
+  var spreadText = document.getElementById("spreadText");
+  var tickerEl = document.getElementById("ticker");
+  var rO = document.getElementById("rO"), rH = document.getElementById("rH"),
+      rL = document.getElementById("rL"), rC = document.getElementById("rC"),
+      rT = document.getElementById("rT"), rLastChip = document.getElementById("rLastChip");
+  var histSvg = document.getElementById("histSvg");
+  var rowEls = {}, labelEls = {};
+
+  function mk(tag, attrs){
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function say(msg){ tickerEl.textContent = msg; }
+
+  // ---- build static ladder ----
+  LEVELS.forEach(function(p){
+    var y = yOf(p);
+    gridG.appendChild(mk("line", {x1:36, y1:y, x2:412, y2:y}));
+    var t = mk("text", {x:28, y:y+4.5, "text-anchor":"end", "class":"plabel"});
+    t.textContent = p;
+    plabelsG.appendChild(t);
+    labelEls[p] = t;
+    var g = mk("g", {"class":"row", "data-p":p});
+    g.appendChild(mk("rect", {"class":"rowbg", x:36, y:y-22, width:248, height:44, rx:10}));
+    rowsG.appendChild(g);
+    rowEls[p] = g;
+  });
+
+  function makeFish(p, i, side, animateIn){
+    var g = document.createElementNS(SVGNS, "g");
+    g.setAttribute("class", "sf");
+    var u = document.createElementNS(SVGNS, "use");
+    u.setAttribute("href", "#fish");
+    u.setAttributeNS(XLINK, "xlink:href", "#fish");
+    u.setAttribute("x", -17); u.setAttribute("y", -10.5);
+    u.setAttribute("width", 34); u.setAttribute("height", 21);
+    var col = side === "ask" ? "#F2635E" : "#2FBF8F";
+    u.setAttribute("fill", col);
+    u.setAttribute("color", col);
+    g.appendChild(u);
+    var x = slotX(i), y = yOf(p);
+    if (animateIn){
+      g.classList.add("spawn");
+      g.style.opacity = "0";
+      g.style.transform = "translate(" + (x-26) + "px," + y + "px)";
+      rowEls[p].appendChild(g);
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){
+        g.style.opacity = "1";
+        g.style.transform = "translate(" + x + "px," + y + "px)";
+        setTimeout(function(){ g.classList.remove("spawn"); }, 380);
+      });});
+    } else {
+      g.style.transform = "translate(" + x + "px," + y + "px)";
+      rowEls[p].appendChild(g);
+    }
+    return g;
+  }
+
+  function seedBook(){
+    LEVELS.forEach(function(p){
+      book[p] = [];
+      var s = SEED[p];
+      sideOf[p] = s[0];
+      for (var i = 0; i < s[1]; i++) book[p].push(makeFish(p, i, s[0], false));
+    });
+  }
+
+  // ---- best prices, spread, row states ----
+  function bestAsk(){
+    var b = null;
+    LEVELS.forEach(function(p){ if (sideOf[p] === "ask" && book[p].length && (b === null || p < b)) b = p; });
+    return b;
+  }
+  function bestBid(){
+    var b = null;
+    LEVELS.forEach(function(p){ if (sideOf[p] === "bid" && book[p].length && (b === null || p > b)) b = p; });
+    return b;
+  }
+  function paintSpread(){
+    var ba = bestAsk(), bb = bestBid();
+    if (ba === null || bb === null){ spreadG.setAttribute("opacity", "0"); return; }
+    var top = yOf(ba) + 20, bot = yOf(bb) - 20;
+    if (bot <= top){ spreadG.setAttribute("opacity", "0"); return; }
+    spreadG.setAttribute("opacity", "1");
+    spreadRect.setAttribute("y", top);
+    spreadRect.setAttribute("height", bot - top);
+    spreadText.setAttribute("y", (top + bot) / 2 + 3.5);
+    spreadText.textContent = "SPREAD " + (ba - bb) + " AED";
+  }
+  function refreshRows(){
+    var ba = bestAsk(), bb = bestBid();
+    LEVELS.forEach(function(p){
+      var g = rowEls[p];
+      g.setAttribute("class", "row");
+      if (!book[p].length) return;
+      g.classList.add(sideOf[p] === "ask" ? "side-ask" : "side-bid");
+      if (p === ba || p === bb) g.classList.add("hot");
+      else g.classList.add("cold");
+    });
+    paintSpread();
+  }
+
+  // ---- candle ----
+  function paintCandle(){
+    var yO = yOf(open), yC = yOf(last), yH = yOf(high), yL = yOf(low);
+    wick.setAttribute("y1", yH); wick.setAttribute("y2", yL);
+    var top = Math.min(yO, yC), h = Math.abs(yO - yC);
+    if (h < 4){ top = yO - 2; h = 4; }
+    bodyR.setAttribute("y", top); bodyR.setAttribute("height", h);
+    bodyR.setAttribute("class", "candle-body " + (last > open ? "up" : last < open ? "dn" : "flat"));
+    lastLine.setAttribute("y1", yC); lastLine.setAttribute("y2", yC);
+    rO.textContent = open; rH.textContent = high; rL.textContent = low; rC.textContent = last;
+    rT.textContent = trades;
+    rLastChip.className = "chip last " + (last > open ? "up" : last < open ? "dn" : "");
+    LEVELS.forEach(function(p){ labelEls[p].setAttribute("class", "plabel" + (p === last ? " cur" : "")); });
+  }
+
+  // ---- eating ----
+  function eat(p){
+    var side = sideOf[p];
+    var fish = book[p].pop();
+    if (!fish) return;
+    fish.style.transform = "translate(" + (wx + MOUTH_DX) + "px," + wy + "px) scale(0.15)";
+    fish.style.opacity = "0";
+    setTimeout(function(){ if (fish.parentNode) fish.parentNode.removeChild(fish); }, 220);
+    whale.classList.remove("gulp"); void whale.getBoundingClientRect(); whale.classList.add("gulp");
+    setTimeout(function(){ whale.classList.remove("gulp"); }, 220);
+
+    last = p; trades++;
+    if (p > high) high = p;
+    if (p < low) low = p;
+
+    var emptied = book[p].length === 0;
+    if (emptied) sideOf[p] = null;
+
+    if (side === "ask"){
+      var na = bestAsk();
+      say(emptied
+        ? "🟢 Bought @ " + p + " AED — the " + p + " AED fish are sold out. " + (na !== null ? "Next seller wants " + na + " AED." : "No sellers left!")
+        : "🟢 Bought a fish @ " + p + " AED. " + book[p].length + " left at this price.");
+    } else {
+      var nb = bestBid();
+      say(emptied
+        ? "🔴 Sold @ " + p + " AED — the " + p + " AED buyers are all filled. " + (nb !== null ? "Next buyer only offers " + nb + " AED." : "No buyers left!")
+        : "🔴 Sold to a buyer @ " + p + " AED. " + book[p].length + " still waiting here.");
+    }
+    refreshRows();
+    paintCandle();
+  }
+
+  function tryChomp(now){
+    if (now - lastChomp < 170) return;
+    var mx = wx + MOUTH_DX, my = wy;
+    var ba = bestAsk(), bb = bestBid();
+    var lockedNear = null;
+    for (var i = 0; i < LEVELS.length; i++){
+      var p = LEVELS[i], n = book[p].length;
+      if (!n) continue;
+      var fx = slotX(n - 1), fy = yOf(p);
+      var d = Math.hypot(mx - fx, my - fy);
+      if (d < EAT_R){
+        if (p === ba || p === bb){ lastChomp = now; eat(p); return; }
+        lockedNear = p;
+      }
+    }
+    if (lockedNear !== null && now - lastLockMsg > 1600){
+      lastLockMsg = now;
+      if (sideOf[lockedNear] === "ask"){
+        say("✋ Best price trades first — the " + bestAsk() + " AED fish sell before " + lockedNear + " AED.");
+      } else {
+        say("✋ Best price trades first — the " + bestBid() + " AED buyers fill before " + lockedNear + " AED.");
+      }
+    }
+  }
+
+  // ---- whale steering ----
+  function setTargetFromEvent(e){
+    var r = stage.getBoundingClientRect();
+    tx = (e.clientX - r.left) / r.width * 420;
+    ty = (e.clientY - r.top) / r.height * 560;
+    tx = Math.max(WHALE_CLAMP.x0, Math.min(WHALE_CLAMP.x1, tx));
+    ty = Math.max(WHALE_CLAMP.y0, Math.min(WHALE_CLAMP.y1, ty));
+  }
+  var dragging = false;
+  stage.addEventListener("pointerdown", function(e){
+    dragging = true; setTargetFromEvent(e);
+    try { stage.setPointerCapture(e.pointerId); } catch(_){}
+    e.preventDefault();
+  });
+  stage.addEventListener("pointermove", function(e){ if (dragging) setTargetFromEvent(e); });
+  stage.addEventListener("pointerup", function(){ dragging = false; });
+  stage.addEventListener("pointercancel", function(){ dragging = false; });
+
+  function loop(now){
+    wx += (tx - wx) * 0.18;
+    wy += (ty - wy) * 0.18;
+    whale.style.transform = "translate(" + wx + "px," + wy + "px)";
+    tryChomp(now);
+    requestAnimationFrame(loop);
+  }
+
+  // ---- adaptive order flow: spawn near price, cancel far from it ----
+  function totalFish(side){
+    var n = 0;
+    LEVELS.forEach(function(p){ if (sideOf[p] === side) n += book[p].length; });
+    return n;
+  }
+  function eligibleLevels(side){
+    var ba = bestAsk(), bb = bestBid();
+    return LEVELS.filter(function(p){
+      if (book[p].length >= CAP) return false;
+      if (book[p].length && sideOf[p] !== side) return false;   // occupied by the other side
+      if (side === "ask"){ if (bb !== null && p <= bb) return false; }
+      else { if (ba !== null && p >= ba) return false; }
+      return true;
+    });
+  }
+  function weightedPick(levels){
+    var ws = levels.map(function(p){ return 1 / (1 + Math.abs(p - last)); });
+    var sum = 0, i;
+    for (i = 0; i < ws.length; i++) sum += ws[i];
+    var r = Math.random() * sum;
+    for (i = 0; i < levels.length; i++){ r -= ws[i]; if (r <= 0) return levels[i]; }
+    return levels[levels.length - 1];
+  }
+  function spawnOrder(){
+    var a = totalFish("ask"), b = totalFish("bid");
+    var side = (a + b === 0) ? (Math.random() < 0.5 ? "ask" : "bid")
+                             : (Math.random() < b / (a + b) ? "ask" : "bid"); // favor the thinner side
+    var lv = eligibleLevels(side);
+    if (!lv.length){ side = side === "ask" ? "bid" : "ask"; lv = eligibleLevels(side); }
+    if (!lv.length) return false;
+    var p = weightedPick(lv);
+    sideOf[p] = side;
+    book[p].push(makeFish(p, book[p].length, side, true));
+    say("🐟 New " + (side === "ask" ? "sell" : "buy") + " order joins the queue @ " + p + " AED.");
+    return true;
+  }
+  function cancelFarOrder(){
+    var far = null, dist = 2;   // only cancel orders 3+ levels from price
+    LEVELS.forEach(function(p){
+      if (!book[p].length) return;
+      if (totalFish(sideOf[p]) <= 2) return;   // keep each side playable
+      var d = Math.abs(p - last);
+      if (d > dist){ dist = d; far = p; }
+    });
+    if (far === null) return false;
+    var side = sideOf[far];
+    var fish = book[far].pop();
+    fish.classList.add("spawn");
+    fish.style.transform = "translate(" + (slotX(book[far].length) - 40) + "px," + yOf(far) + "px)";
+    fish.style.opacity = "0";
+    setTimeout(function(){ if (fish.parentNode) fish.parentNode.removeChild(fish); }, 380);
+    if (!book[far].length) sideOf[far] = null;
+    say("↩️ A far-away " + (side === "ask" ? "sell" : "buy") + " order @ " + far + " AED gives up and cancels.");
+    return true;
+  }
+  setInterval(function(){
+    if (!autoOrders) return;
+    var did = spawnOrder();
+    if (Math.random() < 0.45){
+      setTimeout(function(){ if (autoOrders) { if (cancelFarOrder()) refreshRows(); } }, 1600);
+    }
+    if (did) refreshRows();
+  }, 3600);
+
+  // ---- controls ----
+  document.getElementById("closeBtn").addEventListener("click", function(){
+    history.push({o:open, h:high, l:low, c:last});
+    paintHistory();
+    var msg = trades === 0
+      ? "🕯️ Flat candle — nothing traded that period. New period opens at " + last + " AED."
+      : "🕯️ Candle closed: O " + open + " · H " + high + " · L " + low + " · C " + last + ". New period opens at " + last + " AED.";
+    open = last; high = last; low = last; trades = 0;
+    paintCandle();
+    say(msg);
+  });
+
+  var autoBtn = document.getElementById("autoBtn");
+  autoBtn.addEventListener("click", function(){
+    autoOrders = !autoOrders;
+    autoBtn.classList.toggle("on", autoOrders);
+    autoBtn.setAttribute("aria-pressed", String(autoOrders));
+    autoBtn.textContent = "🔁 Order flow: " + (autoOrders ? "ON" : "OFF");
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    LEVELS.forEach(function(p){
+      book[p].forEach(function(f){ if (f.parentNode) f.parentNode.removeChild(f); });
+      book[p] = []; sideOf[p] = null;
+    });
+    seedBook();
+    open = 10; high = 10; low = 10; last = 10; trades = 0;
+    history = [];
+    paintHistory();
+    refreshRows();
+    paintCandle();
+    say("Market reset. Drag the big fish to a glowing row to trade.");
+  });
+
+  // ---- history chart ----
+  var hyTop = 8, hyBot = 88;
+  var hy = function(p){ return hyBot - (p - 5) * ((hyBot - hyTop) / 9); };
+  function paintHistory(){
+    while (histSvg.firstChild) histSvg.removeChild(histSvg.firstChild);
+    if (!history.length){
+      var t = mk("text", {"class":"empty-note", x:12, y:52});
+      t.textContent = "No closed candles yet — trade, then press \"Close candle\".";
+      histSvg.appendChild(t);
+      return;
+    }
+    var shown = history.slice(-12);
+    shown.forEach(function(c, i){
+      var cx = 20 + i * 31;
+      histSvg.appendChild(mk("line", {x1:cx, y1:hy(c.h), x2:cx, y2:hy(c.l), stroke:"#EAF2FB", "stroke-width":2, "stroke-linecap":"round"}));
+      var top = Math.min(hy(c.o), hy(c.c)), h = Math.abs(hy(c.o) - hy(c.c));
+      if (h < 2.5){ top = hy(c.o) - 1.25; h = 2.5; }
+      var cls = c.c > c.o ? "up" : c.c < c.o ? "dn" : "flat";
+      histSvg.appendChild(mk("rect", {"class":"candle-body " + cls, x:cx-7, y:top, width:14, height:h, rx:2, "stroke-width":1.4}));
+    });
+  }
+
+  // ---- go ----
+  seedBook();
+  refreshRows();
+  paintCandle();
+  paintHistory();
+  whale.style.transform = "translate(" + wx + "px," + wy + "px)";
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
